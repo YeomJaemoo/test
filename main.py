@@ -100,7 +100,8 @@ def main():
         query = st.chat_input("질문을 입력해주세요.")
 
     if query:
-        st.session_state.messages.insert(0, {"role": "user", "content": query})
+    st.session_state.messages.insert(0, {"role": "user", "content": query})
+    st.experimental_set_query_params()
         chain = st.session_state.conversation
         with st.spinner("생각 중..."):
             result = chain({"question": query})
