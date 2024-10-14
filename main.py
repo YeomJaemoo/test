@@ -1,5 +1,4 @@
-# Updated Streamlit code to remove PyAudio dependency and make it work on Streamlit Cloud
-# Now uses browser's SpeechRecognition API to capture user voice inputs via JavaScript integration
+
 
 import streamlit as st
 from pathlib import Path
@@ -16,12 +15,21 @@ from langchain.schema.messages import HumanMessage, AIMessage
 import tiktoken
 import json
 import base64
+import speech_recognition as sr
+import tempfile
+from google.cloud import speech_v1p1beta1 as speech
+from google.oauth2 import service_account
+
+# Ensure that you have set up Google Cloud Speech-to-Text credentials
+credentials = service_account.Credentials.from_service_account_info(st.secrets["GCP_CREDENTIALS"])
+
 
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
     st.title("_:red[에너지 학습 도움이]_ 🏫")
-    st.header("😶주의! 이 첷보트는 참고용으로 사용하세요!", divider='rainbow')
+    st.header("😶주의! 이 찼바드는 참고용으로 사용하세요!", divider='rainbow')
+    
 
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
@@ -39,10 +47,10 @@ def main():
         folder_path = Path()
         openai_api_key = st.secrets["OPENAI_API_KEY"]
         model_name = 'gpt-4o-mini'
-
-        st.text("아래의 'Process'를 눌러고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!🙂🙂🙂")
+        
+        st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!🙂🙂🙂")
         process = st.button("Process", key="process_button")
-
+        
         if process:
             files_text = get_text_from_folder(folder_path)
             text_chunks = get_text_chunks(files_text)
@@ -50,27 +58,28 @@ def main():
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
 
-        st.text_input("Voice Input", key="voice_input", label_visibility="collapsed")
-
         if st.button("말하기", key="speak_button"):
-            st.markdown(
-                """
-                <script>
-                const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                recognition.lang = "ko-KR";
-                recognition.onresult = function(event) {
-                    const voiceInput = event.results[0][0].transcript;
-                    const streamlitInput = window.parent.document.querySelector("input[data-testid='stTextInput']");
-                    if (streamlitInput) {
-                        streamlitInput.value = voiceInput;
-                        streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                };
-                recognition.start();
-                </script>
-                """,
-                unsafe_allow_html=True
-            )
+            with st.spinner("음성을 인식하는 중..."):
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+                        # Streamlit records audio from the user's microphone
+                        audio_bytes = st.audio(temp_audio_file.name, format="audio/wav")
+                        if audio_bytes is not None:
+                            temp_audio_file.write(audio_bytes)
+                            client = speech.SpeechClient(credentials=credentials)
+                            with open(temp_audio_file.name, "rb") as audio_file:
+                                content = audio_file.read()
+                            audio = speech.RecognitionAudio(content=content)
+                            config = speech.RecognitionConfig(
+                                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+                                sample_rate_hertz=16000,
+                                language_code="ko-KR",
+                            )
+                            response = client.recognize(config=config, audio=audio)
+                            for result in response.results:
+                                st.session_state.voice_input = result.alternatives[0].transcript
+                except Exception as e:
+                    st.warning(f"이슈가 발생했습니다: {str(e)}")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -78,11 +87,12 @@ def main():
                 save_conversation_as_txt(st.session_state.chat_history)
             else:
                 st.warning("질문을 입력받고 응답을 확인하세요!")
-
+                
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
-            st.session_state.clear()  # 세션 상태 초기화
-            st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화
+            st.session_state.chat_history = []
+            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
+            st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화  # 화면을 다시 로드하여 대화 내용을 초기화
 
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
@@ -101,7 +111,8 @@ def main():
             with get_openai_callback() as cb:
                 st.session_state.chat_history = result['chat_history']
             response = result['answer']
-            source_documents = result.get('source_documents', [])  # 수정: source_documents가 없는 경우 빈 리스트로 초기화
+            source_documents = result['source_documents']
+            #st.markdown(response)
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
@@ -111,8 +122,8 @@ def main():
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
         with st.expander("참고 문서 확인"):
-            for doc in source_documents:
-                st.markdown(doc.metadata['source'], help=doc.page_content)
+                for doc in source_documents:
+                    st.markdown(doc.metadata['source'], help=doc.page_content)
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -175,8 +186,8 @@ def save_conversation_as_txt(chat_history):
     for message in chat_history:
         role = "user" if isinstance(message, HumanMessage) else "assistant"
         content = message.content
-        conversation += f"여할: {role}\n내용: {content}\n\n"
-
+        conversation += f"연금: {role}\n내용: {content}\n\n"
+    
     b64 = base64.b64encode(conversation.encode()).decode()
     href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
     st.markdown(href, unsafe_allow_html=True)
