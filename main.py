@@ -50,6 +50,8 @@ def main():
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
 
+        st.text_input("Voice Input", key="voice_input", label_visibility="collapsed")
+
         if st.button("말하기", key="speak_button"):
             st.markdown(
                 """
@@ -58,16 +60,17 @@ def main():
                 recognition.lang = "ko-KR";
                 recognition.onresult = function(event) {
                     const voiceInput = event.results[0][0].transcript;
-                    const voiceInputElement = window.parent.document.querySelector('iframe').contentWindow.document.getElementById('voice_input');
-                    voiceInputElement.value = voiceInput;
-                    voiceInputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                    const streamlitInput = window.parent.document.querySelector("input[data-testid='stTextInput']");
+                    if (streamlitInput) {
+                        streamlitInput.value = voiceInput;
+                        streamlitInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
                 };
                 recognition.start();
                 </script>
                 """,
                 unsafe_allow_html=True
             )
-            st.text_input("Voice Input", key="voice_input", label_visibility="collapsed")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
