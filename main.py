@@ -115,7 +115,7 @@ def main():
             with get_openai_callback() as cb:
                 st.session_state.chat_history = result['chat_history']
             response = result['answer']
-            source_documents = result['source_documents']
+            source_documents = result.get('source_documents', [])
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
@@ -124,9 +124,10 @@ def main():
             st.markdown(message_pair[0]["content"])
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
-        with st.expander("참고 문서 확인"):
-            for doc in source_documents:
-                st.markdown(doc.metadata['source'], help=doc.page_content)
+        if 'source_documents' in locals():
+            with st.expander("참고 문서 확인"):
+                for doc in source_documents:
+                    st.markdown(doc.metadata['source'], help=doc.page_content)
 
 
 def tiktoken_len(text):
