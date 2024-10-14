@@ -27,7 +27,7 @@ def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
     st.title("_:red[에너지 학습 도움이]_ 🏫")
-    st.header("😶주의! 이 찬바드는 참고용으로 사용하세요!", divider='rainbow')
+    st.header("😶주의! 이 찼바드는 참고용으로 사용하세요!", divider='rainbow')
     
 
     if "conversation" not in st.session_state:
@@ -47,7 +47,7 @@ def main():
         openai_api_key = st.secrets["OPENAI_API_KEY"]
         model_name = 'gpt-4o-mini'
         
-        st.text("아래의 'Process'를 눌러고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!🙂🙂🙂")
+        st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!🙂🙂🙂")
         process = st.button("Process", key="process_button")
         
         if process:
@@ -68,7 +68,7 @@ def main():
                         with sr.AudioFile(temp_audio_file.name) as source:
                             audio = recognizer.record(source)
                             st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
-                            st.experimental_set_query_params()  # 음성 입력을 질문창에 자동으로 입력하고 화면 경시
+                            st.experimental_set_query_params()  # 음성 입력을 질문창에 자동으로 입력하고 화면 갱신
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
@@ -81,7 +81,7 @@ def main():
             if st.session_state.chat_history:
                 save_conversation_as_txt(st.session_state.chat_history)
             else:
-                st.warning("질문을 입렬받고 응답을 확인하세요!")
+                st.warning("질문을 입력받고 응답을 확인하세요!")
                 
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
@@ -96,7 +96,7 @@ def main():
         query = st.session_state.voice_input
         st.session_state.voice_input = ""
     else:
-        query = st.chat_input("질문을 입력하세요.")
+        query = st.chat_input("질문을 입력해주세요.")
 
     if query:
         st.session_state.messages.insert(0, {"role": "user", "content": query})
@@ -108,7 +108,7 @@ def main():
             response = result['answer']
             source_documents = result['source_documents']
 
-        st.session_state.messages.insert(0, {"role": "assistant", "content": response})
+        st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
     for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
         with st.chat_message(message_pair[0]["role"]):
@@ -183,7 +183,7 @@ def save_conversation_as_txt(chat_history):
         conversation += f"연금: {role}\n내용: {content}\n\n"
     
     b64 = base64.b64encode(conversation.encode()).decode()
-    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
+    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">\대화 다운로드</a>'
     st.markdown(href, unsafe_allow_html=True)
 
 if __name__ == '__main__':
