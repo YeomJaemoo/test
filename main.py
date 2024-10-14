@@ -34,6 +34,9 @@ class AudioProcessor(AudioProcessorBase):
             self.result_text = f"API 요청 오류: {e}"
         return frame
 
+    def get_result_text(self):
+        return self.result_text
+
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
@@ -79,9 +82,11 @@ def main():
             async_processing=True,
         )
 
-        if webrtc_ctx.audio_processor and webrtc_ctx.audio_processor.result_text:
-            st.session_state.voice_input = webrtc_ctx.audio_processor.result_text
-            st.success(f"인식된 음성: {st.session_state.voice_input}")
+        if webrtc_ctx.audio_processor:
+            result_text = webrtc_ctx.audio_processor.get_result_text()
+            if result_text:
+                st.session_state.voice_input = result_text
+                st.success(f"인식된 음성: {st.session_state.voice_input}")
 
     # 메인 영역에 질문 입력창 추가
     query = st.session_state.voice_input if st.session_state.voice_input else st.chat_input("질문을 입력해주세요.")
