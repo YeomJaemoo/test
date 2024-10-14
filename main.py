@@ -76,8 +76,11 @@ def main():
                     )
                     response = client.recognize(config=config, audio=audio)
 
-                    for result in response.results:
-                        st.session_state.voice_input = result.alternatives[0].transcript
+                    if response.results:
+                        st.session_state.voice_input = response.results[0].alternatives[0].transcript
+                        st.success(f"인식된 음성: {st.session_state.voice_input}")
+                    else:
+                        st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except Exception as e:
                     st.warning(f"음성을 인식하는 동안 오류가 발생했습니다: {e}")
 
@@ -100,6 +103,7 @@ def main():
     if st.session_state.voice_input:
         query = st.session_state.voice_input
         st.session_state.voice_input = ""
+        st.experimental_rerun()
     else:
         query = st.chat_input("질문을 입력해주세요.")
 
