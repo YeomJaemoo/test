@@ -83,7 +83,7 @@ def main():
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
             st.session_state.chat_history = []
-            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
+            st.session_state.messages = []
             st.session_state.conversation = None
             st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화 및 최신 상태 유지
 
