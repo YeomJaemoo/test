@@ -12,3 +12,4 @@ docx2txt
 langchain-community
 SpeechRecognition
 langchain_huggingface
+langchain openai
