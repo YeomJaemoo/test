@@ -89,10 +89,13 @@ def main():
             st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 문자보세요!😊"}]
             st.experimental_set_query_params()  # 화면을 다시 로드하여 대화 내용을 초기화
 
-    query = st.session_state.voice_input if st.session_state.voice_input else st.chat_input("질문을 입력해주세요.")
-    st.session_state.voice_input = ""
+    # 항상 질문 입력 창을 표시하도록 수정
+    query = st.session_state.voice_input if st.session_state.voice_input else ""
+    if not query:
+        query = st.chat_input("질문을 입력해주세요.")
 
     if query:
+        st.session_state.voice_input = ""  # 음성 입력 초기화
         st.session_state.messages.insert(0, {"role": "user", "content": query})
         chain = st.session_state.conversation
         with st.spinner("생각 중..."):
