@@ -12,4 +12,4 @@ docx2txt
 langchain-community
 SpeechRecognition
 langchain_huggingface
-streamlit_webrtc
+google-cloud-speech
