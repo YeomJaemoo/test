@@ -89,7 +89,7 @@ def main():
 
                     setTimeout(() => {
                         mediaRecorder.stop();
-                    }, 5000);
+                    }, 8000);
                 });
                 </script>
                 </body>
@@ -98,38 +98,26 @@ def main():
                 height=0
             )
 
-        if save_button := st.button("대화 저장", key="save_button"):
-            if st.session_state.chat_history:
-                save_conversation_as_txt(st.session_state.chat_history)
-            else:
-                st.warning("질문을 입력받고 응답을 확인하세요!")
+        if 'voice_input' in st.session_state and st.session_state.voice_input:
+            query = st.session_state.voice_input
+            st.session_state.voice_input = ""
+        else:
+            query = st.chat_input("질문을 입력해주세요.")
 
-        if clear_button := st.button("대화 내용 삭제", key="clear_button"):
-            st.session_state.chat_history = []
-            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
-            st.experimental_rerun()
+        if query:
+            st.session_state.messages.insert(0, {"role": "user", "content": query})
+            chain = st.session_state.conversation
+            with st.spinner("생각 중..."):
+                result = chain({"question": query})
+                with get_openai_callback() as cb:
+                    st.session_state.chat_history = result['chat_history']
+                response = result['answer']
+                source_documents = result.get('source_documents', [])
+
+            st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
-
-    if st.session_state.voice_input:
-        query = st.session_state.voice_input
-        st.session_state.voice_input = ""
-        st.experimental_rerun()
-    else:
-        query = st.chat_input("질문을 입력해주세요.")
-
-    if query:
-        st.session_state.messages.insert(0, {"role": "user", "content": query})
-        chain = st.session_state.conversation
-        with st.spinner("생각 중..."):
-            result = chain({"question": query})
-            with get_openai_callback() as cb:
-                st.session_state.chat_history = result['chat_history']
-            response = result['answer']
-            source_documents = result.get('source_documents', [])
-
-        st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
     for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
         with st.chat_message(message_pair[0]["role"]):
@@ -140,6 +128,17 @@ def main():
             with st.expander("참고 문서 확인"):
                 for doc in source_documents:
                     st.markdown(doc.metadata['source'], help=doc.page_content)
+
+    if save_button := st.button("대화 저장", key="save_button"):
+        if st.session_state.chat_history:
+            save_conversation_as_txt(st.session_state.chat_history)
+        else:
+            st.warning("질문을 입력받고 응답을 확인하세요!")
+
+    if clear_button := st.button("대화 내용 삭제", key="clear_button"):
+        st.session_state.chat_history = []
+        st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
+        st.experimental_rerun()
 
 
 def tiktoken_len(text):
