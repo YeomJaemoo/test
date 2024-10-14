@@ -19,10 +19,10 @@ from langchain.schema.messages import HumanMessage, AIMessage
 import tiktoken
 import json
 import base64
-from google.cloud import speech
 import tempfile
 import os
 import time
+import streamlit.components.v1 as components
 
 
 def main():
@@ -59,42 +59,52 @@ def main():
             st.session_state.processComplete = True
 
         if st.button("말하기", key="speak_button"):
-            with st.spinner("음성을 인식하는 중..."):
-                try:
-                    client = speech.SpeechClient()
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
-                        temp_audio_file_name = temp_audio_file.name
-                        st.info("음성을 녹음 중입니다. 마이크에 대고 말씀해주세요.")
-                        time.sleep(5)  # 실제 구현에서는 녹음 기능을 통해 파일을 생성해야 합니다.
+            st.info("음성을 녹음 중입니다. 마이크에 대고 말씀해주세요.")
+            components.html(
+                """
+                <html>
+                <body>
+                <script>
+                let mediaRecorder;
+                let audioChunks = [];
 
-                        with open(temp_audio_file_name, "rb") as audio_file:
-                            audio_content = audio_file.read()
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
 
-                    audio = speech.RecognitionAudio(content=audio_content)
-                    config = speech.RecognitionConfig(
-                        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-                        sample_rate_hertz=16000,
-                        language_code="ko-KR",
-                    )
-                    response = client.recognize(config=config, audio=audio)
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
 
-                    if response.results:
-                        st.session_state.voice_input = response.results[0].alternatives[0].transcript
-                        st.success(f"인식된 음성: {st.session_state.voice_input}")
-                    else:
-                        st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
-                except Exception as e:
-                    st.warning(f"음성을 인식하는 동안 오류가 발생했습니다: {e}")
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64data = reader.result;
+                            window.parent.postMessage(base64data, '*');
+                        };
+                    };
 
-        save_button = st.button("대화 저장", key="save_button")
-        if save_button:
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                    }, 5000);
+                });
+                </script>
+                </body>
+                </html>
+                """,
+                height=0
+            )
+
+        if save_button := st.button("대화 저장", key="save_button"):
             if st.session_state.chat_history:
                 save_conversation_as_txt(st.session_state.chat_history)
             else:
                 st.warning("질문을 입력받고 응답을 확인하세요!")
 
-        clear_button = st.button("대화 내용 삭제", key="clear_button")
-        if clear_button:
+        if clear_button := st.button("대화 내용 삭제", key="clear_button"):
             st.session_state.chat_history = []
             st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
             st.experimental_rerun()
