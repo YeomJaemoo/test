@@ -22,6 +22,7 @@ import base64
 from google.cloud import speech
 import tempfile
 import os
+import time
 
 
 def main():
@@ -61,9 +62,10 @@ def main():
             with st.spinner("음성을 인식하는 중..."):
                 try:
                     client = speech.SpeechClient()
-                    with tempfile.NamedTemporaryFile(delete=False) as temp_audio_file:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
                         temp_audio_file_name = temp_audio_file.name
-                        st.audio(temp_audio_file_name, format='audio/wav')
+                        st.info("음성을 녹음 중입니다. 마이크에 대고 말씀해주세요.")
+                        time.sleep(5)  # 실제 구현에서는 녹음 기능을 통해 파일을 생성해야 합니다.
 
                         with open(temp_audio_file_name, "rb") as audio_file:
                             audio_content = audio_file.read()
