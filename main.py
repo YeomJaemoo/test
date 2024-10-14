@@ -22,11 +22,13 @@ import base64
 import speech_recognition as sr
 import tempfile
 
+
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
     st.title("_:red[에너지 학습 도움이]_ 🏫")
-    st.header("😶주의! 이 찾바드는 참고용으로 사용하세요!", divider='rainbow')
+    st.header("😶주의! 이 찼바드는 참고용으로 사용하세요!", divider='rainbow')
+    
 
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
@@ -45,7 +47,7 @@ def main():
         openai_api_key = st.secrets["OPENAI_API_KEY"]
         model_name = 'gpt-4o-mini'
         
-        st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다려주세요!🙂🙂🙂")
+        st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!🙂🙂🙂")
         process = st.button("Process", key="process_button")
         
         if process:
@@ -54,8 +56,6 @@ def main():
             vectorstore = get_vectorstore(text_chunks)
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
-
-       audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
 
         audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
 
@@ -87,9 +87,7 @@ def main():
         if clear_button:
             st.session_state.chat_history = []
             st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
-            st.session_state.conversation = None
-            st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화 및 최신 상태 유지
-
+            st.experimental_set_query_params()  # 화면을 다시 로드하여 대화 내용을 초기화
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
 
