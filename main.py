@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredPowerPointLoader
@@ -17,18 +15,12 @@ import json
 import base64
 import speech_recognition as sr
 import tempfile
-from google.cloud import speech_v1p1beta1 as speech
-from google.oauth2 import service_account
-
-# Ensure that you have set up Google Cloud Speech-to-Text credentials
-credentials = service_account.Credentials.from_service_account_info(st.secrets["GCP_CREDENTIALS"])
-
 
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
-    st.title("_:red[에너지 학습 도움이]_ 🏫")
-    st.header("😶주의! 이 찼바드는 참고용으로 사용하세요!", divider='rainbow')
+    st.title("_:red[에너지 학습 도우미]_ 🏫")
+    st.header("😶주의! 이 챗봇은 참고용으로 사용하세요!", divider='rainbow')
     
 
     if "conversation" not in st.session_state:
@@ -60,26 +52,20 @@ def main():
 
         if st.button("말하기", key="speak_button"):
             with st.spinner("음성을 인식하는 중..."):
+                recognizer = sr.Recognizer()
                 try:
-                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
-                        # Streamlit records audio from the user's microphone
-                        audio_bytes = st.audio(temp_audio_file.name, format="audio/wav")
-                        if audio_bytes is not None:
-                            temp_audio_file.write(audio_bytes)
-                            client = speech.SpeechClient(credentials=credentials)
-                            with open(temp_audio_file.name, "rb") as audio_file:
-                                content = audio_file.read()
-                            audio = speech.RecognitionAudio(content=content)
-                            config = speech.RecognitionConfig(
-                                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-                                sample_rate_hertz=16000,
-                                language_code="ko-KR",
-                            )
-                            response = client.recognize(config=config, audio=audio)
-                            for result in response.results:
-                                st.session_state.voice_input = result.alternatives[0].transcript
-                except Exception as e:
-                    st.warning(f"이슈가 발생했습니다: {str(e)}")
+                    # 마이크가 제대로 설치되었는지 확인
+                    with sr.Microphone() as source:
+                        recognizer.adjust_for_ambient_noise(source)
+                        st.info("마이크가 정상적으로 감지되었습니다. 음성을 말씀해주세요.")
+                        audio = recognizer.listen(source)
+                        st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                except sr.UnknownValueError:
+                    st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
+                except sr.RequestError:
+                    st.warning("서버와의 연결에 문제가 있습니다. 다시 시도하세요!")
+                except OSError:
+                    st.error("마이크가 감지되지 않았습니다. 마이크가 제대로 설치되어 있는지 확인해주세요.")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -91,11 +77,11 @@ def main():
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
             st.session_state.chat_history = []
-            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
+            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
             st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화  # 화면을 다시 로드하여 대화 내용을 초기화
 
     if 'messages' not in st.session_state:
-        st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
+        st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
 
     if st.session_state.voice_input:
         query = st.session_state.voice_input
