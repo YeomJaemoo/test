@@ -55,23 +55,22 @@ def main():
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
 
-        audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
-
-        if audio_value:
+        if st.button("말하기", key="speak_button"):
             with st.spinner("음성을 인식하는 중..."):
                 recognizer = sr.Recognizer()
                 try:
-                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
-                        temp_audio_file.write(audio_value.getvalue())
-                        with sr.AudioFile(temp_audio_file.name) as source:
-                            audio = recognizer.record(source)
-                            st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                    # 마이크가 제대로 설치되었는지 확인
+                    with sr.Microphone() as source:
+                        recognizer.adjust_for_ambient_noise(source)
+                        st.info("마이크가 정상적으로 감지되었습니다. 음성을 말씀해주세요.")
+                        audio = recognizer.listen(source)
+                        st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
                     st.warning("서버와의 연결에 문제가 있습니다. 다시 시도하세요!")
                 except OSError:
-                    st.error("오디오 파일을 처리하는 데 문제가 발생했습니다. 다시 시도하세요.")
+                    st.error("마이크가 감지되지 않았습니다. 마이크가 제대로 설치되어 있는지 확인해주세요.")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -83,7 +82,7 @@ def main():
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
             st.session_state.chat_history = []
-            st.session_state.messages = []
+            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
             st.session_state.conversation = None
             st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화 및 최신 상태 유지
 
