@@ -13,10 +13,9 @@ from langchain.schema.messages import HumanMessage, AIMessage
 import tiktoken
 import json
 import base64
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode, ClientSettings
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
 import numpy as np
 import speech_recognition as sr
-import av
 
 # Audio processor for WebRTC to handle speech recognition
 class AudioProcessor(AudioProcessorBase):
@@ -26,19 +25,17 @@ class AudioProcessor(AudioProcessorBase):
         self.audio_frames = []
 
     def recv(self, frame):
-        audio_frame = frame.to_audio()
+        audio_frame = frame.to_ndarray()
         self.audio_frames.append(audio_frame)
         return frame
 
     def get_result_text(self):
         if self.audio_frames:
-            audio_segment = av.AudioFrame.from_ndarray(
-                np.concatenate([f.to_ndarray() for f in self.audio_frames]),
-                format="s16",
-            )
-            audio_data = sr.AudioData(audio_segment.planes[0].to_bytes(), audio_segment.sample_rate, 2)
+            audio_data = np.concatenate(self.audio_frames, axis=0).tobytes()
+            sample_rate = 16000  # Assuming 16kHz sample rate
+            audio = sr.AudioData(audio_data, sample_rate, 2)
             try:
-                self.result_text = self.recognizer.recognize_google(audio_data, language='ko-KR')
+                self.result_text = self.recognizer.recognize_google(audio, language='ko-KR')
             except sr.UnknownValueError:
                 self.result_text = ""
             except sr.RequestError as e:
@@ -87,14 +84,11 @@ def main():
             key="speech",
             mode=WebRtcMode.SENDRECV,
             audio_processor_factory=AudioProcessor,
+            rtc_configuration={
+                "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+            },
             media_stream_constraints={"audio": True, "video": False},
             async_processing=True,
-            client_settings=ClientSettings(
-                rtc_configuration={
-                    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-                },
-                media_stream_constraints={"audio": True, "video": False},
-            ),
         )
 
         if webrtc_ctx.state.playing and webrtc_ctx.audio_processor:
