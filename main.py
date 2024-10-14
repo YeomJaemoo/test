@@ -16,27 +16,35 @@ import base64
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode, ClientSettings
 import numpy as np
 import speech_recognition as sr
+import av
 
 # Audio processor for WebRTC to handle speech recognition
 class AudioProcessor(AudioProcessorBase):
     def __init__(self):
         self.recognizer = sr.Recognizer()
         self.result_text = ""
+        self.audio_frames = []
 
     def recv(self, frame):
-        audio = frame.to_ndarray()
-        audio_data = sr.AudioData(audio.tobytes(), frame.sample_rate, 2)
-        try:
-            self.result_text = self.recognizer.recognize_google(audio_data, language='ko-KR')
-        except sr.UnknownValueError:
-            self.result_text = ""
-        except sr.RequestError as e:
-            self.result_text = ""
+        audio_frame = frame.to_audio()
+        self.audio_frames.append(audio_frame)
         return frame
 
     def get_result_text(self):
+        if self.audio_frames:
+            audio_segment = av.AudioFrame.from_ndarray(
+                np.concatenate([f.to_ndarray() for f in self.audio_frames]),
+                format="s16",
+            )
+            audio_data = sr.AudioData(audio_segment.planes[0].to_bytes(), audio_segment.sample_rate, 2)
+            try:
+                self.result_text = self.recognizer.recognize_google(audio_data, language='ko-KR')
+            except sr.UnknownValueError:
+                self.result_text = ""
+            except sr.RequestError as e:
+                self.result_text = ""
+            self.audio_frames = []
         return self.result_text
-
 
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
