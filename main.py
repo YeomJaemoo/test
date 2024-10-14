@@ -1,3 +1,9 @@
+# To install langchain_huggingface, run the following command:
+# !pip install langchain-huggingface
+
+# To install langchain_openai, run the following command:
+# !pip install langchain-openai
+
 import streamlit as st
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredPowerPointLoader
@@ -16,11 +22,12 @@ import base64
 import speech_recognition as sr
 import tempfile
 
+
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
-    st.title("_:red[에너지 학습 도우미]_ 🏫")
-    st.header("😶주의! 이 챗봇은 참고용으로 사용하세요!", divider='rainbow')
+    st.title("_:red[에너지 학습 도움이]_ 🏫")
+    st.header("😶주의! 이 찼바드는 참고용으로 사용하세요!", divider='rainbow')
     
 
     if "conversation" not in st.session_state:
@@ -50,22 +57,23 @@ def main():
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
 
-        if st.button("말하기", key="speak_button"):
+        audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
+
+        if audio_value:
             with st.spinner("음성을 인식하는 중..."):
                 recognizer = sr.Recognizer()
                 try:
-                    # 마이크가 제대로 설치되었는지 확인
-                    with sr.Microphone() as source:
-                        recognizer.adjust_for_ambient_noise(source)
-                        st.info("마이크가 정상적으로 감지되었습니다. 음성을 말씀해주세요.")
-                        audio = recognizer.listen(source)
-                        st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+                        temp_audio_file.write(audio_value.getvalue())
+                        with sr.AudioFile(temp_audio_file.name) as source:
+                            audio = recognizer.record(source)
+                            st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
                     st.warning("서버와의 연결에 문제가 있습니다. 다시 시도하세요!")
                 except OSError:
-                    st.error("마이크가 감지되지 않았습니다. 마이크가 제대로 설치되어 있는지 확인해주세요.")
+                    st.error("오디오 파일을 처리하는 데 문제가 발생했습니다. 다시 시도하세요.")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -77,11 +85,11 @@ def main():
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
             st.session_state.chat_history = []
-            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
-            st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화  # 화면을 다시 로드하여 대화 내용을 초기화
+            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
+            st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화
 
     if 'messages' not in st.session_state:
-        st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
+        st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
 
     if st.session_state.voice_input:
         query = st.session_state.voice_input
@@ -98,7 +106,6 @@ def main():
                 st.session_state.chat_history = result['chat_history']
             response = result['answer']
             source_documents = result['source_documents']
-            #st.markdown(response)
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
@@ -175,7 +182,7 @@ def save_conversation_as_txt(chat_history):
         conversation += f"연금: {role}\n내용: {content}\n\n"
     
     b64 = base64.b64encode(conversation.encode()).decode()
-    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
+    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">\대화 다운로드</a>'
     st.markdown(href, unsafe_allow_html=True)
 
 if __name__ == '__main__':
