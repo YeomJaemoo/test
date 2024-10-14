@@ -68,6 +68,7 @@ def main():
                         with sr.AudioFile(temp_audio_file.name) as source:
                             audio = recognizer.record(source)
                             st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                            st.experimental_rerun()  # 음성 입력을 질문창에 자동으로 입력하고 화면 갱신
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
