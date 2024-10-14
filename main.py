@@ -86,8 +86,9 @@ def main():
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
             st.session_state.chat_history = []
-            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
-            st.experimental_set_query_params()  # 화면을 다시 로드하여 대화 내용을 초기화
+            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
+            st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화
+
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
 
@@ -98,7 +99,7 @@ def main():
         query = st.chat_input("질문을 입력해주세요.")
 
     if query:
-        st.session_state.messages.append({"role": "user", "content": query})
+        st.session_state.messages.insert(0, {"role": "user", "content": query})
         chain = st.session_state.conversation
         with st.spinner("생각 중..."):
             result = chain({"question": query})
@@ -107,17 +108,16 @@ def main():
             response = result['answer']
             source_documents = result['source_documents']
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
-    for message_pair in list(zip(st.session_state.messages[::2], st.session_state.messages[1::2])):
+    for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
         with st.chat_message(message_pair[0]["role"]):
             st.markdown(message_pair[0]["content"])
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
-            if 'source_documents' in locals():
-                with st.expander("참고 문서 확인"):
-                    for doc in source_documents:
-                        st.markdown(doc.metadata['source'], help=doc.page_content)
+        with st.expander("참고 문서 확인"):
+                for doc in source_documents:
+                    st.markdown(doc.metadata['source'], help=doc.page_content)
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -180,10 +180,10 @@ def save_conversation_as_txt(chat_history):
     for message in chat_history:
         role = "user" if isinstance(message, HumanMessage) else "assistant"
         content = message.content
-        conversation += f"에너지: {role}\n내용: {content}\n\n"
+        conversation += f"연금: {role}\n내용: {content}\n\n"
     
     b64 = base64.b64encode(conversation.encode()).decode()
-    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
+    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">\대화 다운로드</a>'
     st.markdown(href, unsafe_allow_html=True)
 
 if __name__ == '__main__':
