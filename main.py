@@ -69,6 +69,7 @@ def main():
                         with sr.AudioFile(temp_audio_file.name) as source:
                             audio = recognizer.record(source)
                             st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                    st.session_state.voice_input = st.session_state.voice_input.strip()  # 공백 제거 후 저장
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
