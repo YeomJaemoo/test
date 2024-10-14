@@ -55,22 +55,24 @@ def main():
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
 
-        if st.button("말하기", key="speak_button"):
+       audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
+
+        if audio_value:
             with st.spinner("음성을 인식하는 중..."):
                 recognizer = sr.Recognizer()
                 try:
-                    # 마이크가 제대로 설치되었는지 확인
-                    with sr.Microphone() as source:
-                        recognizer.adjust_for_ambient_noise(source)
-                        st.info("마이크가 정상적으로 감지되었습니다. 음성을 말씀해주세요.")
-                        audio = recognizer.listen(source)
-                        st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
+                        temp_audio_file.write(audio_value.getvalue())
+                        with sr.AudioFile(temp_audio_file.name) as source:
+                            audio = recognizer.record(source)
+                            st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
+                            st.experimental_set_query_params()  # 음성 입력을 질문창에 자동으로 입력하고 화면 갱신
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
                     st.warning("서버와의 연결에 문제가 있습니다. 다시 시도하세요!")
                 except OSError:
-                    st.error("마이크가 감지되지 않았습니다. 마이크가 제대로 설치되어 있는지 확인해주세요.")
+                    st.error("오디오 파일을 처리하는 데 문제가 발생했습니다. 다시 시도하세요.")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
