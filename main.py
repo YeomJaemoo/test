@@ -76,10 +76,34 @@ def main():
             async_processing=True,
         )
 
-        # 음성이 인식된 경우 입력 필드에 저장
         if webrtc_ctx.audio_processor and webrtc_ctx.audio_processor.result_text:
             st.session_state.voice_input = webrtc_ctx.audio_processor.result_text
             st.success(f"인식된 음성: {st.session_state.voice_input}")
+            # 음성 인식 결과가 있으면 바로 질문으로 처리
+            query = st.session_state.voice_input
+            st.session_state.voice_input = ""  # 입력 초기화
+
+            if query:
+                st.session_state.messages.insert(0, {"role": "user", "content": query})
+                chain = st.session_state.conversation
+                with st.spinner("생각 중..."):
+                    result = chain({"question": query})
+                    with get_openai_callback() as cb:
+                        st.session_state.chat_history = result['chat_history']
+                    response = result['answer']
+                    source_documents = result.get('source_documents', [])
+
+                st.session_state.messages.insert(1, {"role": "assistant", "content": response})
+
+                for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
+                    with st.chat_message(message_pair[0]["role"]):
+                        st.markdown(message_pair[0]["content"])
+                    with st.chat_message(message_pair[1]["role"]):
+                        st.markdown(message_pair[1]["content"])
+                    if source_documents:
+                        with st.expander("참고 문서 확인"):
+                            for doc in source_documents:
+                                st.markdown(doc.metadata['source'], help=doc.page_content)
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -96,33 +120,6 @@ def main():
 
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
-
-    # 음성이 인식되었으면 자동으로 질의로 처리
-    query = st.session_state.voice_input if st.session_state.voice_input else st.chat_input("질문을 입력해주세요.")
-
-    if query:
-        st.session_state.messages.insert(0, {"role": "user", "content": query})
-        st.session_state.voice_input = ""  # 음성 입력 초기화
-        chain = st.session_state.conversation
-        with st.spinner("생각 중..."):
-            result = chain({"question": query})
-            with get_openai_callback() as cb:
-                st.session_state.chat_history = result['chat_history']
-            response = result['answer']
-            # `source_documents`가 존재하는지 확인하여 에러 방지
-            source_documents = result.get('source_documents', [])
-            st.session_state.messages.insert(1, {"role": "assistant", "content": response})
-
-    for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
-        with st.chat_message(message_pair[0]["role"]):
-            st.markdown(message_pair[0]["content"])
-        with st.chat_message(message_pair[1]["role"]):
-            st.markdown(message_pair[1]["content"])
-        # source_documents가 존재할 경우에만 문서를 표시
-        if source_documents:
-            with st.expander("참고 문서 확인"):
-                for doc in source_documents:
-                    st.markdown(doc.metadata['source'], help=doc.page_content)
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
