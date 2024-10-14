@@ -203,4 +203,12 @@ def save_conversation_as_txt(chat_history):
     conversation = ""
     for message in chat_history:
         role = "user" if isinstance(message, HumanMessage) else "assistant"
-        content = message
+        content = message.content
+        conversation += f"역할: {role}\n내용: {content}\n\n"
+
+    b64 = base64.b64encode(conversation.encode()).decode()
+    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
+if __name__ == '__main__':
+    main()
