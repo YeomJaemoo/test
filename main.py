@@ -58,22 +58,16 @@ def main():
                 recognition.lang = "ko-KR";
                 recognition.onresult = function(event) {
                     const voiceInput = event.results[0][0].transcript;
-                    fetch(
-                        "/voice_input",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({"voice_input": voiceInput})
-                        }
-                    ).then(() => window.location.href = window.location.href);
+                    const voiceInputElement = window.parent.document.querySelector('iframe').contentWindow.document.getElementById('voice_input');
+                    voiceInputElement.value = voiceInput;
+                    voiceInputElement.dispatchEvent(new Event('input', { bubbles: true }));
                 };
                 recognition.start();
                 </script>
                 """,
                 unsafe_allow_html=True
             )
+            st.text_input("Voice Input", key="voice_input", label_visibility="collapsed")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -104,7 +98,7 @@ def main():
             with get_openai_callback() as cb:
                 st.session_state.chat_history = result['chat_history']
             response = result['answer']
-            source_documents = result['source_documents']
+            source_documents = result.get('source_documents', [])  # 수정: source_documents가 없는 경우 빈 리스트로 초기화
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
