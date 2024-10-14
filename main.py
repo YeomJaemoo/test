@@ -74,7 +74,7 @@ def main():
                 except sr.RequestError:
                     st.warning("서버와의 연결에 문제가 있습니다. 다시 시도하세요!")
                 except OSError:
-                    st.error("오디오 파일을 처리하는 데 문제가 발생했습니다. 다시 시도하세요.")
+                    st.error("오디오 파일을 처리하는 데 문제가 발생했습니다. 다시 시도하세요!")
 
         save_button = st.button("대화 저장", key="save_button")
         if save_button:
@@ -90,20 +90,23 @@ def main():
             st.experimental_set_query_params()  # 화면을 다시 로드하여 대화 내용을 초기화
 
     # 항상 질문 입력 창을 표시하도록 수정
-    query = st.session_state.voice_input if st.session_state.voice_input else ""
-    if not query:
-        query = st.chat_input("질문을 입력해주세요.")
+    query = st.session_state.voice_input or st.chat_input("질문을 입력해주세요.")
 
     if query:
         st.session_state.voice_input = ""  # 음성 입력 초기화
         st.session_state.messages.insert(0, {"role": "user", "content": query})
         chain = st.session_state.conversation
         with st.spinner("생각 중..."):
-            result = chain({"question": query})
-            with get_openai_callback() as cb:
-                st.session_state.chat_history = result['chat_history']
-            response = result['answer']
-            source_documents = result['source_documents']
+            try:
+                result = chain({"question": query})
+                with get_openai_callback() as cb:
+                    st.session_state.chat_history = result['chat_history']
+                response = result['answer']
+                source_documents = result.get('source_documents', [])
+            except Exception as e:
+                st.error("질문을 처리하는 중 오류가 발생했습니다. 다시 시도하세요.")
+                response = ""
+                source_documents = []
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
@@ -113,8 +116,8 @@ def main():
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
         with st.expander("참고 문서 확인"):
-                for doc in source_documents:
-                    st.markdown(doc.metadata['source'], help=doc.page_content)
+            for doc in source_documents:
+                st.markdown(doc.metadata.get('source', '출처 없음'), help=doc.page_content)
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
