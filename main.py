@@ -68,7 +68,7 @@ def main():
                         with sr.AudioFile(temp_audio_file.name) as source:
                             audio = recognizer.record(source)
                             st.session_state.voice_input = recognizer.recognize_google(audio, language='ko-KR')
-                            st.experimental_set_query_params()  # 음성 입력을 질문창에 자동으로 입력하고 화면 갱신
+                            st.experimental_set_query_params()  # 화면을 갱신하여 결과를 반영  # 음성 입력을 질문창에 자동으로 입력하고 화면 갱신
                 except sr.UnknownValueError:
                     st.warning("음성을 인식하지 못했습니다. 다시 시도하세요!")
                 except sr.RequestError:
@@ -99,8 +99,9 @@ def main():
     else:
         query = st.chat_input("질문을 입력해주세요.")
 
+    
     if query:
-    st.session_state.messages.insert(0, {"role": "user", "content": query})
+        st.session_state.messages.insert(0, {"role": "user", "content": query})
     st.experimental_set_query_params()
         chain = st.session_state.conversation
         with st.spinner("생각 중..."):
