@@ -57,6 +57,8 @@ def main():
 
        audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
 
+        audio_value = st.experimental_audio_input("음성 메시지를 녹음하세요.")
+
         if audio_value:
             with st.spinner("음성을 인식하는 중..."):
                 recognizer = sr.Recognizer()
