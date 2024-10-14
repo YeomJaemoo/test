@@ -13,7 +13,7 @@ from langchain.schema.messages import HumanMessage, AIMessage
 import tiktoken
 import json
 import base64
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode, ClientSettings
 import numpy as np
 import speech_recognition as sr
 
@@ -81,9 +81,15 @@ def main():
             audio_processor_factory=AudioProcessor,
             media_stream_constraints={"audio": True, "video": False},
             async_processing=True,
+            client_settings=ClientSettings(
+                rtc_configuration={
+                    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+                },
+                media_stream_constraints={"audio": True, "video": False},
+            ),
         )
 
-        if webrtc_ctx.audio_processor:
+        if webrtc_ctx.state.playing and webrtc_ctx.audio_processor:
             result_text = webrtc_ctx.audio_processor.get_result_text()
             if result_text:
                 st.session_state.voice_input = result_text
