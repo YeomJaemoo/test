@@ -119,9 +119,10 @@ def main():
             st.markdown(message_pair[0]["content"])
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
-        with st.expander("참고 문서 확인"):
-            for doc in source_documents:
-                st.markdown(doc.metadata.get('source', '출처 없음'), help=doc.page_content)
+        if 'source_documents' in locals() and source_documents:
+            with st.expander("참고 문서 확인"):
+                for doc in source_documents:
+                    st.markdown(doc.metadata.get('source', '출처 없음'), help=doc.page_content)
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
