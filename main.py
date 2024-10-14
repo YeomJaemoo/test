@@ -94,19 +94,23 @@ def main():
 
     if query:
         st.session_state.voice_input = ""  # 음성 입력 초기화
-        st.session_state.messages.insert(0, {"role": "user", "content": query})
-        chain = st.session_state.conversation
-        with st.spinner("생각 중..."):
-            try:
-                result = chain({"question": query})
-                with get_openai_callback() as cb:
-                    st.session_state.chat_history = result['chat_history']
-                response = result['answer']
-                source_documents = result.get('source_documents', [])
-            except Exception as e:
-                st.error("질문을 처리하는 중 오류가 발생했습니다. 다시 시도하세요.")
-                response = ""
-                source_documents = []
+        try:
+            st.session_state.messages.insert(0, {"role": "user", "content": query})
+            chain = st.session_state.conversation
+            with st.spinner("생각 중..."):
+                if chain:
+                    result = chain({"question": query})
+                    with get_openai_callback() as cb:
+                        st.session_state.chat_history = result['chat_history']
+                    response = result['answer']
+                    source_documents = result.get('source_documents', [])
+                else:
+                    response = "모델이 준비되지 않았습니다. 'Process' 버튼을 눌러 모델을 준비해주세요."
+                    source_documents = []
+        except Exception as e:
+            st.error("질문을 처리하는 중 오류가 발생했습니다. 다시 시도하세요.")
+            response = ""
+            source_documents = []
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
