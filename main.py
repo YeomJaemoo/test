@@ -89,7 +89,9 @@ def main():
             st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 문자보세요!😊"}]
             st.experimental_set_query_params()  # 화면을 다시 로드하여 대화 내용을 초기화
 
-    query = st.session_state.voice_input if st.session_state.voice_input else st.chat_input("질문을 입력해주세요.")
+    query = st.session_state.voice_input if st.session_state.voice_input else ""
+    if not query:
+        query = st.chat_input("질문을 입력해주세요.")
     st.session_state.voice_input = ""
 
     if query:
