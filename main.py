@@ -93,9 +93,9 @@ def main():
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
 
     query = st.chat_input("질문을 입력해주세요.")
-    if st.session_state.voice_input:
-        query = st.session_state.voice_input
-        st.session_state.voice_input = ""
+if st.session_state.voice_input:
+    query = st.session_state.voice_input
+    st.session_state.voice_input = ""
     else:
         query = st.chat_input("질문을 입력해주세요.")
 
@@ -103,6 +103,7 @@ def main():
     
     if query:
     st.session_state.messages.insert(0, {"role": "user", "content": query})
+        
     
         with get_openai_callback() as cb:
             st.session_state.chat_history = result['chat_history']
