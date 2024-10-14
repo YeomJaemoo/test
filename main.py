@@ -29,13 +29,14 @@ class AudioProcessor(AudioProcessorBase):
         try:
             self.result_text = self.recognizer.recognize_google(audio_data, language='ko-KR')
         except sr.UnknownValueError:
-            self.result_text = "음성을 인식할 수 없습니다."
+            self.result_text = ""
         except sr.RequestError as e:
-            self.result_text = f"API 요청 오류: {e}"
+            self.result_text = ""
         return frame
 
     def get_result_text(self):
         return self.result_text
+
 
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
@@ -86,7 +87,7 @@ def main():
             result_text = webrtc_ctx.audio_processor.get_result_text()
             if result_text:
                 st.session_state.voice_input = result_text
-                st.success(f"인식된 음성: {st.session_state.voice_input}")
+                st.experimental_rerun()  # 페이지를 다시 로드하여 음성 입력이 질문으로 처리되도록 함
 
     # 메인 영역에 질문 입력창 추가
     query = st.session_state.voice_input if st.session_state.voice_input else st.chat_input("질문을 입력해주세요.")
