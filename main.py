@@ -109,18 +109,20 @@ def main():
             with get_openai_callback() as cb:
                 st.session_state.chat_history = result['chat_history']
             response = result['answer']
-            source_documents = result['source_documents']
-
-        st.session_state.messages.insert(1, {"role": "assistant", "content": response})
+            # `source_documents`가 존재하는지 확인하여 에러 방지
+            source_documents = result.get('source_documents', [])
+            st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
     for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
         with st.chat_message(message_pair[0]["role"]):
             st.markdown(message_pair[0]["content"])
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
-        with st.expander("참고 문서 확인"):
-            for doc in source_documents:
-                st.markdown(doc.metadata['source'], help=doc.page_content)
+        # source_documents가 존재할 경우에만 문서를 표시
+        if source_documents:
+            with st.expander("참고 문서 확인"):
+                for doc in source_documents:
+                    st.markdown(doc.metadata['source'], help=doc.page_content)
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
