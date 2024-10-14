@@ -92,6 +92,7 @@ def main():
     if 'messages' not in st.session_state:
         st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
 
+    query = st.chat_input("질문을 입력해주세요.")
     if st.session_state.voice_input:
         query = st.session_state.voice_input
         st.session_state.voice_input = ""
