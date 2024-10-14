@@ -10,6 +10,4 @@ pypdf
 loguru
 docx2txt
 langchain-community
-pyaudio
 SpeechRecognition
-pipwin
