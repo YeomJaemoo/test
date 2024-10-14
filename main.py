@@ -14,7 +14,7 @@ from langchain_community.callbacks import get_openai_callback
 from langchain.memory import ConversationBufferMemory
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain.chains import ConversationalRetrievalChain
-from langchain_openai import ChatOpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.schema.messages import HumanMessage, AIMessage
 import tiktoken
 import json
