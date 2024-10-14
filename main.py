@@ -59,7 +59,7 @@ def main():
                 recognition.onresult = function(event) {
                     const voiceInput = event.results[0][0].transcript;
                     fetch(
-                        "https://localhost:8501/voice_input",
+                        "/voice_input",
                         {
                             method: "POST",
                             headers: {
@@ -67,7 +67,7 @@ def main():
                             },
                             body: JSON.stringify({"voice_input": voiceInput})
                         }
-                    ).then(() => window.location.reload());
+                    ).then(() => window.location.href = window.location.href);
                 };
                 recognition.start();
                 </script>
@@ -84,8 +84,7 @@ def main():
 
         clear_button = st.button("대화 내용 삭제", key="clear_button")
         if clear_button:
-            st.session_state.chat_history = []
-            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 묻어보세요!😊"}]
+            st.session_state.clear()  # 세션 상태 초기화
             st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화
 
     if 'messages' not in st.session_state:
@@ -179,7 +178,7 @@ def save_conversation_as_txt(chat_history):
     for message in chat_history:
         role = "user" if isinstance(message, HumanMessage) else "assistant"
         content = message.content
-        conversation += f"역할: {role}\n내용: {content}\n\n"
+        conversation += f"여할: {role}\n내용: {content}\n\n"
 
     b64 = base64.b64encode(conversation.encode()).decode()
     href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
