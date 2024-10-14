@@ -43,6 +43,7 @@ class AudioProcessor(AudioProcessorBase):
             self.audio_frames = []
         return self.result_text
 
+
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
@@ -91,7 +92,10 @@ def main():
             async_processing=True,
         )
 
-        if webrtc_ctx.state.playing and webrtc_ctx.audio_processor:
+        if webrtc_ctx.state.playing:
+            st.info("녹음 중입니다. 말을 하세요...")
+
+        if webrtc_ctx.audio_processor:
             result_text = webrtc_ctx.audio_processor.get_result_text()
             if result_text:
                 st.session_state.voice_input = result_text
@@ -199,12 +203,4 @@ def save_conversation_as_txt(chat_history):
     conversation = ""
     for message in chat_history:
         role = "user" if isinstance(message, HumanMessage) else "assistant"
-        content = message.content
-        conversation += f"역할: {role}\n내용: {content}\n\n"
-
-    b64 = base64.b64encode(conversation.encode()).decode()
-    href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
-    st.markdown(href, unsafe_allow_html=True)
-
-if __name__ == '__main__':
-    main()
+        content = message
