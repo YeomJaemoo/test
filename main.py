@@ -105,16 +105,18 @@ def main():
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
+        # source_documents가 있을 때만 참고 문서 확인 표시
+        if source_documents:
+            with st.expander("참고 문서 확인"):
+                for doc in source_documents:
+                    st.markdown(doc.metadata['source'], help=doc.page_content)
+
     # 채팅 기록을 화면에 표시
     for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
         with st.chat_message(message_pair[0]["role"]):
             st.markdown(message_pair[0]["content"])
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
-        if source_documents:
-            with st.expander("참고 문서 확인"):
-                for doc in source_documents:
-                    st.markdown(doc.metadata['source'], help=doc.page_content)
 
     save_button = st.button("대화 저장", key="save_button")
     if save_button:
