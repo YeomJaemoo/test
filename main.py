@@ -1,3 +1,9 @@
+# langchain_huggingface 설치 명령어:
+# !pip install langchain-huggingface
+
+# langchain_openai 설치 명령어:
+# !pip install langchain-openai
+
 import streamlit as st
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredPowerPointLoader
@@ -13,41 +19,15 @@ from langchain.schema.messages import HumanMessage, AIMessage
 import tiktoken
 import json
 import base64
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
-import numpy as np
-import speech_recognition as sr
-
-# Audio processor for WebRTC to handle speech recognition
-class AudioProcessor(AudioProcessorBase):
-    def __init__(self):
-        self.recognizer = sr.Recognizer()
-        self.result_text = ""
-        self.audio_frames = []
-
-    def recv(self, frame):
-        audio_frame = frame.to_ndarray()
-        self.audio_frames.append(audio_frame)
-        return frame
-
-    def get_result_text(self):
-        if self.audio_frames:
-            audio_data = np.concatenate(self.audio_frames, axis=0).tobytes()
-            sample_rate = 16000  # Assuming 16kHz sample rate
-            audio = sr.AudioData(audio_data, sample_rate, 2)
-            try:
-                self.result_text = self.recognizer.recognize_google(audio, language='ko-KR')
-            except sr.UnknownValueError:
-                self.result_text = ""
-            except sr.RequestError as e:
-                self.result_text = ""
-            self.audio_frames = []
-        return self.result_text
+from google.cloud import speech
+import tempfile
+import os
 
 
 def main():
     st.set_page_config(page_title="에너지", page_icon="🌻")
     st.image('knowhow.png')
-    st.title("_:red[에너지 학습 도우미]_ 🏫")
+    st.title("_:red[에너지 학습 도움이]_ 🏫")
     st.header("😶주의! 이 챗봇은 참고용으로 사용하세요!", divider='rainbow')
 
     if "conversation" not in st.session_state:
@@ -62,15 +42,12 @@ def main():
     if "voice_input" not in st.session_state:
         st.session_state.voice_input = ""
 
-    if 'messages' not in st.session_state:
-        st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
-
     with st.sidebar:
         folder_path = Path()
         openai_api_key = st.secrets["OPENAI_API_KEY"]
         model_name = 'gpt-4o-mini'
 
-        st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!😊😊😊")
+        st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!😊")
         process = st.button("Process", key="process_button")
 
         if process:
@@ -80,73 +57,79 @@ def main():
             st.session_state.conversation = get_conversation_chain(vectorstore, openai_api_key, model_name)
             st.session_state.processComplete = True
 
-        # WebRTC streamer for voice input
-        webrtc_ctx = webrtc_streamer(
-            key="speech",
-            mode=WebRtcMode.SENDRECV,
-            audio_processor_factory=AudioProcessor,
-            rtc_configuration={
-                "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-            },
-            media_stream_constraints={"audio": True, "video": False},
-            async_processing=True,
-        )
+        if st.button("말하기", key="speak_button"):
+            with st.spinner("음성을 인식하는 중..."):
+                try:
+                    client = speech.SpeechClient()
+                    with tempfile.NamedTemporaryFile(delete=False) as temp_audio_file:
+                        temp_audio_file_name = temp_audio_file.name
+                        st.audio(temp_audio_file_name, format='audio/wav')
 
-        if webrtc_ctx.state.playing:
-            st.info("녹음 중입니다. 말을 하세요...")
+                        with open(temp_audio_file_name, "rb") as audio_file:
+                            audio_content = audio_file.read()
 
-        if webrtc_ctx.audio_processor:
-            result_text = webrtc_ctx.audio_processor.get_result_text()
-            if result_text:
-                st.session_state.voice_input = result_text
-                st.experimental_rerun()  # 페이지를 다시 로드하여 음성 입력이 질문으로 처리되도록 함
+                    audio = speech.RecognitionAudio(content=audio_content)
+                    config = speech.RecognitionConfig(
+                        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+                        sample_rate_hertz=16000,
+                        language_code="ko-KR",
+                    )
+                    response = client.recognize(config=config, audio=audio)
 
-    # 메인 영역에 질문 입력창 추가
-    query = st.session_state.voice_input if st.session_state.voice_input else st.chat_input("질문을 입력해주세요.")
+                    for result in response.results:
+                        st.session_state.voice_input = result.alternatives[0].transcript
+                except Exception as e:
+                    st.warning(f"음성을 인식하는 동안 오류가 발생했습니다: {e}")
+
+        save_button = st.button("대화 저장", key="save_button")
+        if save_button:
+            if st.session_state.chat_history:
+                save_conversation_as_txt(st.session_state.chat_history)
+            else:
+                st.warning("질문을 입력받고 응답을 확인하세요!")
+
+        clear_button = st.button("대화 내용 삭제", key="clear_button")
+        if clear_button:
+            st.session_state.chat_history = []
+            st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
+            st.experimental_rerun()
+
+    if 'messages' not in st.session_state:
+        st.session_state['messages'] = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
+
+    if st.session_state.voice_input:
+        query = st.session_state.voice_input
+        st.session_state.voice_input = ""
+    else:
+        query = st.chat_input("질문을 입력해주세요.")
 
     if query:
         st.session_state.messages.insert(0, {"role": "user", "content": query})
-        st.session_state.voice_input = ""  # 입력 초기화
         chain = st.session_state.conversation
         with st.spinner("생각 중..."):
             result = chain({"question": query})
             with get_openai_callback() as cb:
                 st.session_state.chat_history = result['chat_history']
             response = result['answer']
-            source_documents = result.get('source_documents', [])
+            source_documents = result['source_documents']
 
         st.session_state.messages.insert(1, {"role": "assistant", "content": response})
 
-        # source_documents가 있을 때만 참고 문서 확인 표시
-        if source_documents:
-            with st.expander("참고 문서 확인"):
-                for doc in source_documents:
-                    st.markdown(doc.metadata['source'], help=doc.page_content)
-
-    # 채팅 기록을 화면에 표시
     for message_pair in (list(zip(st.session_state.messages[::2], st.session_state.messages[1::2]))):
         with st.chat_message(message_pair[0]["role"]):
             st.markdown(message_pair[0]["content"])
         with st.chat_message(message_pair[1]["role"]):
             st.markdown(message_pair[1]["content"])
+        with st.expander("참고 문서 확인"):
+            for doc in source_documents:
+                st.markdown(doc.metadata['source'], help=doc.page_content)
 
-    save_button = st.button("대화 저장", key="save_button")
-    if save_button:
-        if st.session_state.chat_history:
-            save_conversation_as_txt(st.session_state.chat_history)
-        else:
-            st.warning("질문을 입력받고 응답을 확인하세요!")
-
-    clear_button = st.button("대화 내용 삭제", key="clear_button")
-    if clear_button:
-        st.session_state.chat_history = []
-        st.session_state.messages = [{"role": "assistant", "content": "에너지 학습에 대해 물어보세요!😊"}]
-        st.experimental_rerun()  # 화면을 다시 로드하여 대화 내용을 초기화
 
 def tiktoken_len(text):
     tokenizer = tiktoken.get_encoding("cl100k_base")
     tokens = tokenizer.encode(text)
     return len(tokens)
+
 
 def get_text_from_folder(folder_path):
     doc_list = []
@@ -169,6 +152,7 @@ def get_text_from_folder(folder_path):
             doc_list.extend(documents)
     return doc_list
 
+
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=900,
@@ -178,6 +162,7 @@ def get_text_chunks(text):
     chunks = text_splitter.split_documents(text)
     return chunks
 
+
 def get_vectorstore(text_chunks):
     embeddings = HuggingFaceEmbeddings(
         model_name="jhgan/ko-sroberta-multitask",
@@ -186,6 +171,7 @@ def get_vectorstore(text_chunks):
     )
     vectordb = FAISS.from_documents(text_chunks, embeddings)
     return vectordb
+
 
 def get_conversation_chain(vectorstore, openai_api_key, model_name):
     llm = ChatOpenAI(openai_api_key=openai_api_key, model_name=model_name, temperature=0)
@@ -199,6 +185,7 @@ def get_conversation_chain(vectorstore, openai_api_key, model_name):
     )
     return conversation_chain
 
+
 def save_conversation_as_txt(chat_history):
     conversation = ""
     for message in chat_history:
@@ -209,6 +196,7 @@ def save_conversation_as_txt(chat_history):
     b64 = base64.b64encode(conversation.encode()).decode()
     href = f'<a href="data:file/txt;base64,{b64}" download="대화.txt">대화 다운로드</a>'
     st.markdown(href, unsafe_allow_html=True)
+
 
 if __name__ == '__main__':
     main()
