@@ -46,7 +46,7 @@ def main():
     with st.sidebar:
         folder_path = Path()
         openai_api_key = st.secrets["OPENAI_API_KEY"]
-        model_name = 'gpt-4o-mini'
+        model_name = 'gpt-4o'
         
         st.text("아래의 'Process'를 누르고\n아래 채팅창이 활성화 될 때까지\n잠시 기다리세요!😊😊😊")
         process = st.button("Process", key="process_button")
